@@ -51,9 +51,11 @@ Manager::Manager()
 
 Manager::Manager(uint32_t physicalDeviceIndex,
                  const std::vector<uint32_t>& familyQueueIndices,
-                 const std::vector<std::string>& desiredExtensions)
+                 const std::vector<std::string>& desiredExtensions,
+                 const LockCallbacks& lockCallbacks)
 {
     this->mManageResources = true;
+    this->mLockCallbacks = lockCallbacks;
 
 // Make sure the logger is setup
 #if !KOMPUTE_OPT_LOG_LEVEL_DISABLED
@@ -67,13 +69,15 @@ Manager::Manager(uint32_t physicalDeviceIndex,
 
 Manager::Manager(std::shared_ptr<vk::Instance> instance,
                  std::shared_ptr<vk::PhysicalDevice> physicalDevice,
-                 std::shared_ptr<vk::Device> device)
+                 std::shared_ptr<vk::Device> device,
+                 const LockCallbacks& lockCallbacks)
 {
     this->mManageResources = false;
 
     this->mInstance = instance;
     this->mPhysicalDevice = physicalDevice;
     this->mDevice = device;
+    this->mLockCallbacks = lockCallbacks;
 
 // Make sure the logger is setup
 #if !KOMPUTE_OPT_LOG_LEVEL_DISABLED
@@ -500,6 +504,7 @@ Manager::sequence(uint32_t queueIndex, uint32_t totalTimestamps)
       this->mDevice,
       this->mComputeQueues[queueIndex],
       this->mComputeQueueFamilyIndices[queueIndex],
+      this->mLockCallbacks,
       totalTimestamps) };
 
     if (this->mManageResources) {
