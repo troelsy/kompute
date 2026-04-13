@@ -5,15 +5,11 @@
 
 #include "kompute/operations/OpAlgoDispatch.hpp"
 #include "kompute/operations/OpBase.hpp"
+#include <mutex>
 
 #include <functional>
 
 namespace kp {
-
-  struct LockCallbacks {
-      std::function<void()> lock;
-      std::function<void()> unlock;
-  };
 
 /**
  *  Container of operations that can be sent to GPU as batch
@@ -29,15 +25,14 @@ class Sequence : public std::enable_shared_from_this<Sequence>
      * @param device Vulkan logical device
      * @param computeQueue Vulkan compute queue
      * @param queueIndex Vulkan compute queue index in device
-     * @param lockCallbacks Lock callbacks for thread safety on Vulkan queue submit
      * @param totalTimestamps Maximum number of timestamps to allocate
      */
     Sequence(std::shared_ptr<vk::PhysicalDevice> physicalDevice,
              std::shared_ptr<vk::Device> device,
              std::shared_ptr<vk::Queue> computeQueue,
              uint32_t queueIndex,
-             LockCallbacks lockCallbacks = {},
-             uint32_t totalTimestamps = 0) noexcept;
+             uint32_t totalTimestamps = 0,
+             std::shared_ptr<std::mutex> submitMutex = nullptr) noexcept;
 
     /**
      * @brief Make Sequence uncopyable
@@ -302,17 +297,13 @@ class Sequence : public std::enable_shared_from_this<Sequence>
     vk::Fence mFence;
     std::vector<std::shared_ptr<OpBase>> mOperations{};
     std::shared_ptr<vk::QueryPool> timestampQueryPool = nullptr;
+    std::shared_ptr<std::mutex> mSubmitMutex = nullptr;
 
     // State
     bool mRecording = false;
     bool mIsRunning = false;
 
   private:
-    LockCallbacks mLockCallbacks;
-
-    void submit_lock();
-    void submit_unlock();
-
     // Create functions
     void createCommandPool();
     void createCommandBuffer();

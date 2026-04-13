@@ -7,6 +7,10 @@
 #include "kompute/Sequence.hpp"
 #include "logger/Logger.hpp"
 
+#ifdef KOMPUTE_OPT_THREAD_SAFE_COMPUTE_QUEUE
+#include <mutex>
+#endif
+
 #define KP_DEFAULT_SESSION "DEFAULT"
 
 namespace kp {
@@ -32,12 +36,10 @@ class Manager
      * explicit allocation
      * @param desiredExtensions The desired extensions to load from
      * physicalDevice
-     * @param lockCallbacks Lock callbacks for thread safety on Vulkan queue submit
      */
     Manager(uint32_t physicalDeviceIndex,
             const std::vector<uint32_t>& familyQueueIndices = {},
-            const std::vector<std::string>& desiredExtensions = {},
-            const LockCallbacks& lockCallbacks = {});
+            const std::vector<std::string>& desiredExtensions = {});
 
     /**
      * Manager constructor which allows your own vulkan application to integrate
@@ -47,12 +49,10 @@ class Manager
      * @param physicalDevice Vulkan physical device to use for application
      * @param device Vulkan logical device to use for all base resources
      * @param physicalDeviceIndex Index for vulkan physical device used
-     * @param lockCallbacks Lock callbacks for thread safety on Vulkan queue submit
      */
     Manager(std::shared_ptr<vk::Instance> instance,
             std::shared_ptr<vk::PhysicalDevice> physicalDevice,
-            std::shared_ptr<vk::Device> device,
-            const LockCallbacks& lockCallbacks = {});
+            std::shared_ptr<vk::Device> device);
 
 
     /**
@@ -550,8 +550,11 @@ class Manager
     std::vector<uint32_t> mComputeQueueFamilyIndices;
     std::vector<std::shared_ptr<vk::Queue>> mComputeQueues;
 
+  #ifdef KOMPUTE_OPT_THREAD_SAFE_COMPUTE_QUEUE
+    std::shared_ptr<std::mutex> mSequenceSubmitMutex = nullptr;
+  #endif
+
     bool mManageResources = false;
-    LockCallbacks mLockCallbacks;
 
 #ifndef KOMPUTE_DISABLE_VK_DEBUG_LAYERS
     vk::DebugReportCallbackEXT mDebugReportCallback;
